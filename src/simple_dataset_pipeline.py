@@ -20,6 +20,10 @@ from src.audio_segmenting import build_audio_windows, extract_wav_window
 from src.audio_transcription import ChunkingConfig, ChunkingProcessor, transcribe_files
 from src.clap_audio_embeddings import CLAPConfig, CLAPEmbedding
 from src.embedding_config import load_embedding_config, write_embedding_config_from_env
+from src.embeddinggemma_embeddings import (
+    EmbeddingGemmaConfig,
+    EmbeddingGemmaMultimodalEmbedding,
+)
 from src.gemini_multimodal_embeddings import GeminiEmbeddingConfig, GeminiMultimodalEmbedding
 from src.segment_clips import (
     CLIP_DIR_NAME,
@@ -78,6 +82,8 @@ def _write_process_run_log(
             "clap_model": embedding_config.clap_model,
             "gemini_model": embedding_config.gemini_model,
             "gemini_output_dimensionality": embedding_config.gemini_output_dimensionality,
+            "embeddinggemma_model": embedding_config.embeddinggemma_model,
+            "embeddinggemma_output_dimensionality": embedding_config.embeddinggemma_output_dimensionality,
             "yamnet_model": embedding_config.yamnet_model,
             "yamnet_top_k": embedding_config.yamnet_top_k,
         },
@@ -136,6 +142,8 @@ def _pipeline_signature(
             "clap_model": embedding_config.clap_model,
             "gemini_model": embedding_config.gemini_model,
             "gemini_output_dimensionality": embedding_config.gemini_output_dimensionality,
+            "embeddinggemma_model": embedding_config.embeddinggemma_model,
+            "embeddinggemma_output_dimensionality": embedding_config.embeddinggemma_output_dimensionality,
         },
         "classifiers": {
             "active": sorted(embedding_config.active_classifiers),
@@ -362,7 +370,7 @@ def run_pipeline(
 
     audio_windows: dict[int, list[Path]] = {}
     if len(new_df) and (
-        embedding_config.active_embeddings & {"clap", "gemini"}
+        embedding_config.active_embeddings & {"clap", "gemini", "embeddinggemma"}
         or embedding_config.is_classifier_active("yamnet")
     ):
         for _, row in new_df.iterrows():
@@ -428,6 +436,33 @@ def run_pipeline(
                 )
             )
         embeddings["gemini"] = np.asarray(gemini_embeddings, dtype=np.float32)
+
+    if len(new_df) and embedding_config.is_embedding_active("embeddinggemma"):
+        logger.info(
+            "Generating EmbeddingGemma 2 audio embeddings (%s)",
+            embedding_config.embeddinggemma_model,
+        )
+        embeddinggemma = EmbeddingGemmaMultimodalEmbedding(
+            EmbeddingGemmaConfig(
+                model_name=embedding_config.embeddinggemma_model,
+                output_dimensionality=embedding_config.embeddinggemma_output_dimensionality,
+            )
+        )
+        embeddinggemma_embeddings = []
+        for _, row in new_df.iterrows():
+            window_embeddings = [
+                embeddinggemma.generate_audio_embedding(path)
+                for path in audio_windows[int(row["segment_id"])]
+            ]
+            embeddinggemma_embeddings.append(
+                _pool_audio_embeddings(
+                    window_embeddings,
+                    embedding_config.embeddinggemma_output_dimensionality,
+                )
+            )
+        embeddings["embeddinggemma"] = np.asarray(
+            embeddinggemma_embeddings, dtype=np.float32
+        )
 
     if len(new_df) and embedding_config.is_classifier_active("yamnet"):
         logger.info("Classifying acoustic events with YAMNet (%s)", embedding_config.yamnet_model)
@@ -538,6 +573,7 @@ def run_pipeline(
         "text": "text_index.faiss",
         "clap": "audio_index.faiss",
         "gemini": "gemini_audio_index.faiss",
+        "embeddinggemma": "embeddinggemma_audio_index.faiss",
     }
     yamnet_index_path = indices_dir / YAMNET_INVERTED_INDEX_FILENAME
     yamnet_index_token_count = 0

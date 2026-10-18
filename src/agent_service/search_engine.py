@@ -4,7 +4,7 @@ import json
 import logging
 import math
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import faiss
@@ -509,7 +509,7 @@ class AudioSearchEngine:
                     expires_at = getattr(reference, "expires_at", None)
                     if expires_at is not None:
                         result["clip_expires_at"] = datetime.fromtimestamp(
-                            expires_at, tz=timezone.utc
+                            expires_at, tz=UTC
                         ).isoformat()
 
         if include_sentiment:

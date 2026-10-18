@@ -62,14 +62,18 @@ ml = [
     "torch>=2.2",
     "torchvision>=0.15",
     "openai-whisper>=20231117",
-    "sentence-transformers>=2.2",
+    # sentence-transformers>=6.1 is required for EmbeddingGemma 2
+    # (google/embeddinggemma-2) multimodal encode({"audio": ...}).
+    "sentence-transformers>=6.1",
     "transformers>=4.30",
+    "torchcodec>=0.5",
     "laion-clap>=1.1",
     "faiss-cpu>=1.7",
     "librosa>=0.10",
     "soundfile>=0.12",
     "pydub>=0.25",
     "pysentimiento>=0.7",
+    "yt-dlp>=2025.9.0",
 ]
 dev = [
     "pytest>=7.0",
@@ -93,9 +97,10 @@ eval = [
 python = "~3.11"
 # Transcripción
 openai-whisper = ">=20231117"
-# Embeddings de texto
-sentence-transformers = ">=2.2"
+# Embeddings de texto / EmbeddingGemma 2 (audio requiere >=6.1 + torchcodec)
+sentence-transformers = ">=6.1"
 transformers = ">=4.30"
+torchcodec = ">=0.5"
 # Audio processing
 librosa = ">=0.10"
 soundfile = ">=0.12"
@@ -117,6 +122,8 @@ numpy = ">=1.24,<2.0"
 # Audio embeddings (CLAP)
 laion-clap = ">=1.1"
 torchvision = ">=0.15"
+# Ingesta desde YouTube
+yt-dlp = ">=2025.9.0"
 # Sentiment analysis
 pysentimiento = ">=0.7"
 # Utilities

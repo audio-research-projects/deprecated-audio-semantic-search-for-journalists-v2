@@ -81,3 +81,55 @@ def test_write_embedding_config_from_env_generates_loadable_toml(tmp_path):
 def test_embedding_config_from_env_rejects_yamnet_as_an_embedding():
     with pytest.raises(ValueError, match="EMBEDDINGS_ACTIVE"):
         embedding_config_from_env({"EMBEDDINGS_ACTIVE": "text,yamnet"})
+
+
+def test_embedding_config_from_env_reads_embeddinggemma():
+    config = embedding_config_from_env(
+        {
+            "EMBEDDINGS_ACTIVE": "text,embeddinggemma",
+            "EMBEDDINGGEMMA_MODEL": "google/embeddinggemma-2",
+            "EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY": "256",
+        }
+    )
+
+    assert config.active_embeddings == frozenset({"text", "embeddinggemma"})
+    assert config.embeddinggemma_model == "google/embeddinggemma-2"
+    assert config.embeddinggemma_output_dimensionality == 256
+
+
+def test_embedding_config_from_env_rejects_invalid_embeddinggemma_dimensionality():
+    with pytest.raises(ValueError, match="EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY"):
+        embedding_config_from_env(
+            {"EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY": "300"}
+        )
+
+
+def test_load_embedding_config_reads_embeddinggemma(tmp_path):
+    config_path = tmp_path / "embeddings.toml"
+    config_path.write_text(
+        "[embeddings]\nactive = ['text', 'embeddinggemma']\n"
+        "[embeddings.embeddinggemma]\n"
+        "model = 'google/embeddinggemma-2'\noutput_dimensionality = 512\n"
+    )
+
+    config = load_embedding_config(config_path)
+
+    assert config.active_embeddings == frozenset({"text", "embeddinggemma"})
+    assert config.embeddinggemma_model == "google/embeddinggemma-2"
+    assert config.embeddinggemma_output_dimensionality == 512
+
+
+def test_write_embedding_config_from_env_includes_embeddinggemma_section(tmp_path):
+    config_path = tmp_path / "embeddings.toml"
+
+    write_embedding_config_from_env(
+        config_path,
+        {
+            "EMBEDDINGS_ACTIVE": "text,embeddinggemma",
+            "EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY": "128",
+        },
+    )
+
+    loaded = load_embedding_config(config_path)
+    assert loaded.active_embeddings == frozenset({"text", "embeddinggemma"})
+    assert loaded.embeddinggemma_output_dimensionality == 128

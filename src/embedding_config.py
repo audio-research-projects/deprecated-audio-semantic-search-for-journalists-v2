@@ -9,7 +9,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-VALID_EMBEDDINGS = frozenset({"text", "clap", "gemini"})
+VALID_EMBEDDINGS = frozenset({"text", "clap", "gemini", "embeddinggemma"})
 VALID_CLASSIFIERS = frozenset({"yamnet"})
 DEFAULT_EMBEDDINGS = ("text", "clap")
 DEFAULT_CLASSIFIERS: tuple[str, ...] = ()
@@ -23,6 +23,8 @@ class EmbeddingConfig:
     clap_model: str = "laion/clap-htsat-unfused"
     gemini_model: str = "gemini-embedding-2"
     gemini_output_dimensionality: int = 1536
+    embeddinggemma_model: str = "google/embeddinggemma-2"
+    embeddinggemma_output_dimensionality: int = 768
     yamnet_model: str = "https://tfhub.dev/google/yamnet/1"
     yamnet_top_k: int = 5
 
@@ -73,11 +75,18 @@ def embedding_config_from_env(env: Mapping[str, str] | None = None) -> Embedding
 
     try:
         gemini_dimensions = int(values.get("GEMINI_EMBEDDING_OUTPUT_DIMENSIONALITY", "1536"))
+        embeddinggemma_dimensions = int(
+            values.get("EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY", "768")
+        )
         yamnet_top_k = int(values.get("YAMNET_TOP_K", "5"))
     except ValueError as error:
         raise ValueError("Embedding numeric environment variables must be integers") from error
     if gemini_dimensions <= 0:
         raise ValueError("GEMINI_EMBEDDING_OUTPUT_DIMENSIONALITY must be a positive integer")
+    if embeddinggemma_dimensions not in (768, 512, 256, 128):
+        raise ValueError(
+            "EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY must be a Matryoshka level: 768, 512, 256 or 128"
+        )
     if yamnet_top_k <= 0:
         raise ValueError("YAMNET_TOP_K must be a positive integer")
 
@@ -88,6 +97,10 @@ def embedding_config_from_env(env: Mapping[str, str] | None = None) -> Embedding
         clap_model=values.get("CLAP_EMBEDDING_MODEL", "laion/clap-htsat-unfused"),
         gemini_model=values.get("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"),
         gemini_output_dimensionality=gemini_dimensions,
+        embeddinggemma_model=values.get(
+            "EMBEDDINGGEMMA_MODEL", "google/embeddinggemma-2"
+        ),
+        embeddinggemma_output_dimensionality=embeddinggemma_dimensions,
         yamnet_model=values.get("YAMNET_MODEL", "https://tfhub.dev/google/yamnet/1"),
         yamnet_top_k=yamnet_top_k,
     )
@@ -101,7 +114,9 @@ def write_embedding_config_from_env(
     config_path = Path(path)
     config_path.parent.mkdir(parents=True, exist_ok=True)
     active_embeddings = [
-        name for name in ("text", "clap", "gemini") if name in config.active_embeddings
+        name
+        for name in ("text", "clap", "gemini", "embeddinggemma")
+        if name in config.active_embeddings
     ]
     active_classifiers = [
         name for name in ("yamnet",) if name in config.active_classifiers
@@ -118,6 +133,9 @@ def write_embedding_config_from_env(
         "[embeddings.gemini]\n"
         f"model = {json.dumps(config.gemini_model)}\n"
         f"output_dimensionality = {config.gemini_output_dimensionality}\n\n"
+        "[embeddings.embeddinggemma]\n"
+        f"model = {json.dumps(config.embeddinggemma_model)}\n"
+        f"output_dimensionality = {config.embeddinggemma_output_dimensionality}\n\n"
         "[classifiers]\n"
         f"active = {json.dumps(active_classifiers)}\n\n"
         "[classifiers.yamnet]\n"
@@ -162,10 +180,16 @@ def load_embedding_config(path: str | Path) -> EmbeddingConfig:
     text = embeddings.get("text", {})
     clap = embeddings.get("clap", {})
     gemini = embeddings.get("gemini", {})
+    embeddinggemma = embeddings.get("embeddinggemma", {})
     yamnet = classifiers.get("yamnet", embeddings.get("yamnet", {}))
     dimensions = gemini.get("output_dimensionality", 1536)
     if not isinstance(dimensions, int) or dimensions <= 0:
         raise ValueError("embeddings.gemini.output_dimensionality must be a positive integer")
+    embeddinggemma_dimensions = embeddinggemma.get("output_dimensionality", 768)
+    if embeddinggemma_dimensions not in (768, 512, 256, 128):
+        raise ValueError(
+            "embeddings.embeddinggemma.output_dimensionality must be 768, 512, 256 or 128"
+        )
     yamnet_top_k = yamnet.get("top_k", 5)
     if not isinstance(yamnet_top_k, int) or yamnet_top_k <= 0:
         raise ValueError("embeddings.yamnet.top_k must be a positive integer")
@@ -176,6 +200,8 @@ def load_embedding_config(path: str | Path) -> EmbeddingConfig:
         clap_model=clap.get("model", "laion/clap-htsat-unfused"),
         gemini_model=gemini.get("model", "gemini-embedding-2"),
         gemini_output_dimensionality=dimensions,
+        embeddinggemma_model=embeddinggemma.get("model", "google/embeddinggemma-2"),
+        embeddinggemma_output_dimensionality=embeddinggemma_dimensions,
         yamnet_model=yamnet.get("model", "https://tfhub.dev/google/yamnet/1"),
         yamnet_top_k=yamnet_top_k,
     )

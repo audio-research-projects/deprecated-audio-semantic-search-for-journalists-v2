@@ -13,7 +13,7 @@ web/ — SPA React + Vite (búsqueda directa + drawer del Eve Agent)
        │        ├─ agent/channels/eve.ts (vercelOidc + localDev + bearer/anon)
        │        └─ agent/tools/*.ts (buscar_audio, buscar_evento_acustico, buscar_clase_audio, ...)
        │
-       └──► /api/* (Direct Search API en Vercel Serverless Functions, servicio "web")
+       └──► /api/* (Direct Search API — servicio "api", Express en server.ts)
                 ├─ POST /api/search y /api/search/plan
                 ├─ POST /api/agent-chat (fallback same-origin para el drawer, mismas tools)
                 ├─ GET  /api/datasets, /api/corpus, /api/segments/:segmentId
@@ -50,6 +50,37 @@ uv run python -m src.simple_dataset_pipeline \
 ```
 
 *(Si ya tenés un dataset con `text` y `clap`, `publish_dataset_neon.py` también soporta exportar `clap` y usar un endpoint externo en `CUSTOM_EMBEDDING_API_URL`).*
+
+### Alternativa: EmbeddingGemma 2 en lugar de CLAP
+
+`EMBEDDINGS_ACTIVE` también acepta `embeddinggemma`: [EmbeddingGemma 2](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/) (`google/embeddinggemma-2`, Apache 2.0) mapea **texto y audio al mismo espacio de 768d** vía `sentence-transformers>=6.1`, sin dependencia de `laion-clap`. Corre local (CPU, ~570M params cargando solo los encoders de texto+audio) y sus vectores son truncables por Matryoshka (`EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY=768|512|256|128`).
+
+```bash
+EMBEDDINGS_ACTIVE=text,embeddinggemma \
+EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY=768 \
+uv run python -m src.simple_dataset_pipeline --input data/ --output ./dataset
+```
+
+En el lado de consulta (Vercel no puede correr el modelo), seteá `AUDIO_EMBEDDING_PROVIDER=embeddinggemma` + `EMBEDDINGGEMMA_API_URL` apuntando al servicio de referencia en `deploy/vercel/embeddinggemma-service/` (FastAPI, `POST /embed {text, modality} → {embedding}` — Dockerfile incluido para Cloud Run). La dimensión del servicio debe coincidir con `EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY` de la ingesta.
+
+### Ingesta directa desde YouTube
+
+`scripts/ingest_youtube_neon.py` orquesta todo el flujo (descarga `yt-dlp` → pipeline de ingesta → Neon + Vercel Blob) a partir de uno o más links:
+
+```bash
+EMBEDDINGS_ACTIVE=text,embeddinggemma \
+DATABASE_URL="postgresql://..." \
+BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..." \
+uv run python scripts/ingest_youtube_neon.py \
+  --youtube-url "https://www.youtube.com/watch?v=DVt_mzCOGtA" \
+  --dataset ./dataset-youtube \
+  --dataset-id youtube \
+  --label "YouTube ingest"
+```
+
+- Las descargas quedan en `./youtube-audio/` (override: `--download-dir`) y se **reutilizan entre corridas** — el pipeline es incremental sobre ese directorio, así que agregar un video nuevo no reprocesa los anteriores.
+- Flags útiles: `--skip-publish` (solo procesar local), `--skip-pipeline` (solo republicar un dataset ya procesado), `--dry-run`, `--audio-embedding-source embeddinggemma`, `--whisper-model`, `--mock-audio`.
+- Requiere `ffmpeg` en PATH (extracción `yt-dlp` + conversión a WAV) y el grupo `ml` de uv.
 
 ---
 
