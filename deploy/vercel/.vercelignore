@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-web/
+.output/
+.eve/
+.env
+.env.*
+!.env.example
+embeddinggemma-service/model/
+embeddinggemma-service/.venv/
+**/__pycache__/
