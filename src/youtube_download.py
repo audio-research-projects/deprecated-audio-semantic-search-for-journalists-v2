@@ -75,7 +75,9 @@ def download_youtube_audio(
     if not downloaded:
         # Already downloaded in a previous run: locate the file by video id.
         downloaded = sorted(
-            path for path in out_dir.glob(f"* [{video_id}].{audio_format}")
+            path
+            for path in out_dir.iterdir()
+            if path.is_file() and path.name.endswith(f" [{video_id}].{audio_format}")
         )
     if not downloaded:
         raise RuntimeError(f"yt-dlp finished but no audio file was produced for {url}")

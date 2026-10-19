@@ -22,7 +22,7 @@ class CLAPConfig:
     # Language of incoming text queries. If not English, the query is translated
     # to English before CLAP's text encoder, because laion/clap-htsat-unfused
     # uses a RoBERTa-base text encoder trained on English.
-    query_language: str = field(default_factory=lambda: os.environ.get("QUERY_LANGUAGE", "en"))
+    query_language: str = field(default_factory=lambda: os.environ.get("QUERY_LANGUAGE", "es"))
 
 
 class CLAPEmbedding:

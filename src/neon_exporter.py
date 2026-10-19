@@ -6,12 +6,12 @@ import json
 import logging
 import math
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import httpx
 import numpy as np
 import pandas as pd
 
@@ -20,7 +20,6 @@ from src.yamnet_inverted_index import build_yamnet_inverted_index
 
 logger = logging.getLogger(__name__)
 
-VERCEL_BLOB_API_URL = "https://blob.vercel-storage.com"
 REQUIRED_DATASET_FILE = Path("final/complete_dataset.pkl")
 SCHEMA_SQL_PATH = Path(__file__).resolve().parent.parent / "deploy" / "vercel" / "db" / "schema.sql"
 
@@ -131,31 +130,63 @@ def upload_clip_to_vercel_blob(
     *,
     dataset_id: str,
     release: str,
-    blob_token: str,
-    client: httpx.Client | None = None,
 ) -> str:
-    """Upload a single `.opus` clip to Vercel Blob and return its public URL."""
+    """Upload a single `.opus` clip to private Vercel Blob and return its URL."""
+    from vercel.blob import sync as blob
+
     pathname = f"audio-search/{dataset_id}/{release}/{CLIP_DIR_NAME}/{clip_path.name}"
-    url = f"{VERCEL_BLOB_API_URL}/{pathname}"
-    headers = {
-        "Authorization": f"Bearer {blob_token}",
-        "x-api-version": "7",
-        "x-content-type": "audio/ogg",
-        "x-add-random-suffix": "0",
+    with clip_path.open("rb") as clip_file:
+        result = blob.put_blob(
+            pathname,
+            clip_file,
+            content_length=clip_path.stat().st_size,
+            content_type="audio/ogg",
+            access="private",
+            add_random_suffix=False,
+            allow_overwrite=True,
+        )
+    return result.url
+
+
+def upload_clips_to_vercel_blob(
+    clip_paths: list[Path],
+    *,
+    dataset_id: str,
+    release: str,
+    max_workers: int = 4,
+) -> dict[str, str]:
+    """Resume-safe concurrent upload of clips to private Vercel Blob."""
+    from vercel.blob import sync as blob
+
+    prefix = f"audio-search/{dataset_id}/{release}/{CLIP_DIR_NAME}/"
+    existing = {item.pathname for item in blob.query_blobs(prefix=prefix)}
+    pending = [path for path in clip_paths if f"{prefix}{path.name}" not in existing]
+    logger.info(
+        "Clips ya presentes: %d; pendientes de subir: %d",
+        len(clip_paths) - len(pending),
+        len(pending),
+    )
+    urls = {
+        path.name: f"{prefix}{path.name}"
+        for path in clip_paths
+        if f"{prefix}{path.name}" in existing
     }
-    own_client = client is None
-    http = client or httpx.Client(timeout=60.0)
-    try:
-        response = http.put(url, content=clip_path.read_bytes(), headers=headers)
-        response.raise_for_status()
-        payload = response.json()
-        blob_url = payload.get("url")
-        if not isinstance(blob_url, str) or not blob_url:
-            raise RuntimeError(f"Vercel Blob response missing 'url' for {clip_path.name}")
-        return blob_url
-    finally:
-        if own_client:
-            http.close()
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(
+                upload_clip_to_vercel_blob,
+                path,
+                dataset_id=dataset_id,
+                release=release,
+            ): path
+            for path in pending
+        }
+        for completed, future in enumerate(as_completed(futures), start=1):
+            path = futures[future]
+            urls[path.name] = future.result()
+            if completed % 100 == 0 or completed == len(futures):
+                logger.info("Clips subidos: %d/%d pendientes", completed, len(futures))
+    return urls
 
 
 def prepare_dataset_bundle(
@@ -454,4 +485,5 @@ __all__ = [
     "prepare_dataset_bundle",
     "publish_bundle_to_neon",
     "upload_clip_to_vercel_blob",
+    "upload_clips_to_vercel_blob",
 ]

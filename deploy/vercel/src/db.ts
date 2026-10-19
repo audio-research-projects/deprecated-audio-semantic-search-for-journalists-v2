@@ -73,9 +73,9 @@ export function normalizedAudioClassTokens(value: string): string[] {
 
 export function configuredMinDurationSeconds(): number {
   const raw = process.env.MIN_SEGMENT_DURATION_SECONDS?.trim();
-  if (!raw) return 5.0;
+  if (!raw) return 0.0;
   const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 5.0;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0.0;
 }
 
 function getSql() {
@@ -86,7 +86,11 @@ function getSql() {
   return neon(url);
 }
 
-function rowToSegment(row: Record<string, unknown>, includeSentiment = false): SegmentRecord {
+function rowToSegment(
+  row: Record<string, unknown>,
+  includeSentiment = false,
+  datasetId?: string,
+): SegmentRecord {
   const startTime = Number(row.start_time ?? 0);
   const endTime = Number(row.end_time ?? 0);
   const classesRaw = row.yamnet_top_classes;
@@ -112,7 +116,9 @@ function rowToSegment(row: Record<string, unknown>, includeSentiment = false): S
     segment.clip_end_time = Number(row.clip_end_time ?? endTime);
   }
   if (row.clip_url) {
-    segment.clip_url = String(row.clip_url);
+    segment.clip_url = datasetId
+      ? `/api/clips/${segment.segment_id}?dataset_id=${encodeURIComponent(datasetId)}`
+      : undefined;
   }
   if (yamnetClasses.length > 0) {
     segment.yamnet_audio_classes = yamnetClasses;
@@ -186,7 +192,7 @@ export async function searchSemanticNeon(
   const results: SearchHit[] = rows.map((row) => {
     const similarity = Number(row.similarity ?? 0);
     return {
-      segment: rowToSegment(row as Record<string, unknown>),
+      segment: rowToSegment(row as Record<string, unknown>, false, meta.dataset_id),
       similarity,
       distance: 1 - similarity,
     };
@@ -202,7 +208,7 @@ export async function searchAudioNeon(
   const sql = getSql();
   const meta = await resolveDatasetMeta(options?.datasetId);
   const minDuration = configuredMinDurationSeconds();
-  const translatedQuery = options?.queryEn?.trim() || (await translateToEnglish(query));
+  const translatedQuery = options?.queryEn?.trim() || await translateToEnglish(query);
   const embedding = await generateAudioQueryEmbedding(translatedQuery);
   const vectorLiteral = toPgVectorLiteral(embedding);
 
@@ -222,7 +228,7 @@ export async function searchAudioNeon(
   const results: SearchHit[] = rows.map((row) => {
     const similarity = Number(row.similarity ?? 0);
     return {
-      segment: rowToSegment(row as Record<string, unknown>),
+      segment: rowToSegment(row as Record<string, unknown>, false, meta.dataset_id),
       similarity,
       distance: 1 - similarity,
     };
@@ -305,7 +311,7 @@ export async function searchYamnetNeon(
       orderedMatches.reduce((acc, item) => acc + item.score, 0) / orderedMatches.length;
     const rankScore = coverage * meanScore;
 
-    const segment = rowToSegment(entry.row);
+    const segment = rowToSegment(entry.row, false, meta.dataset_id);
     segment.yamnet_matched_classes = orderedMatches.map((m) => ({
       class_id: m.class_id,
       class_name: m.class_name,
@@ -336,7 +342,21 @@ export async function getSegmentInfoNeon(
     LIMIT 1
   `;
   if (!rows.length) return null;
-  return rowToSegment(rows[0] as Record<string, unknown>, true);
+  return rowToSegment(rows[0] as Record<string, unknown>, true, meta.dataset_id);
+}
+
+export async function getClipBlobReferenceNeon(
+  segmentId: number,
+  datasetId: string,
+): Promise<string | null> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT clip_url FROM audio_segments
+    WHERE dataset_id = ${datasetId} AND segment_id = ${segmentId}
+    LIMIT 1
+  `;
+  const url = rows[0]?.clip_url;
+  return typeof url === "string" && url ? url : null;
 }
 
 export async function getAudioClassesNeon(

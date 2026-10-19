@@ -1,5 +1,5 @@
 import { defineAgent } from "eve";
 
 export default defineAgent({
-  model: `openai/${process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini"}`,
+  model: process.env.TEXT_GENERATION_MODEL?.trim() || "openai/gpt-4o-mini",
 });

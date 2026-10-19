@@ -24,7 +24,7 @@ from src.yamnet_inverted_index import (
 logger = logging.getLogger(__name__)
 
 _MIN_SEGMENT_DURATION_ENV = "MIN_SEGMENT_DURATION_SECONDS"
-_DEFAULT_MIN_SEGMENT_DURATION_SECONDS = 5.0
+_DEFAULT_MIN_SEGMENT_DURATION_SECONDS = 0.0
 
 
 def _configured_min_segment_duration() -> float:

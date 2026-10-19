@@ -9,6 +9,8 @@
 
 export type EmbeddingProvider = "huggingface" | "gemini" | "openai" | "custom" | "embeddinggemma";
 
+import { gateway, generateText } from "ai";
+
 function l2Normalize(values: number[]): number[] {
   let normSq = 0;
   for (const v of values) normSq += v * v;
@@ -27,34 +29,17 @@ export async function translateToEnglish(text: string): Promise<string> {
   const queryLang = (process.env.QUERY_LANGUAGE ?? "es").toLowerCase();
   if (queryLang === "en" || queryLang === "english") return trimmed;
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return trimmed;
-
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      messages: [
-        {
-          role: "system",
-          content:
-            "Translate the following audio search query into concise English keywords or description suitable for CLAP/AudioSet acoustic matching. Output only the English translation.",
-        },
-        { role: "user", content: trimmed },
-      ],
-    }),
+  const model = process.env.TEXT_GENERATION_MODEL?.trim() || "openai/gpt-4o-mini";
+  const response = await generateText({
+    model: gateway(model),
+    temperature: 0,
+    system:
+      "Translate the audio search query into English for CLAP, EmbeddingGemma, or AudioSet retrieval. Preserve its meaning, sound events, proper nouns, quoted phrases, and numbers. If already English, return it unchanged. Output only the English query.",
+    prompt: trimmed,
   });
-  if (!response.ok) return trimmed;
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  return data.choices?.[0]?.message?.content?.trim() || trimmed;
+  const translated = response.text.trim();
+  if (!translated) throw new Error("Gateway returned an empty English translation.");
+  return translated;
 }
 
 async function embedWithHuggingFace(text: string, model: string): Promise<number[]> {
@@ -152,19 +137,23 @@ async function embedWithCustomEndpoint(text: string, modality: "text" | "audio")
  * prompt and MRL truncation, so the vector matches the 768/512/256/128-dim
  * embeddings ingested into Neon.
  */
-async function embedWithEmbeddingGemma(text: string, modality: "text" | "audio"): Promise<number[]> {
+async function embedWithEmbeddingGemma(text: string): Promise<number[]> {
   const baseUrl = (
-    process.env.EMBEDDINGGEMMA_API_URL ?? process.env.CUSTOM_EMBEDDING_API_URL
+    process.env.EMBEDDINGGEMMA_API_URL ??
+    process.env.EMBEDDINGGEMMA_SERVICE_URL ??
+    process.env.CUSTOM_EMBEDDING_API_URL
   )?.trim().replace(/\/$/, "");
   if (!baseUrl) {
     throw new Error(
-      "EMBEDDINGGEMMA_API_URL (or CUSTOM_EMBEDDING_API_URL) is required for the embeddinggemma provider."
+      "EMBEDDINGGEMMA_SERVICE_URL or EMBEDDINGGEMMA_API_URL is required for the embeddinggemma provider."
     );
   }
   const response = await fetch(`${baseUrl}/embed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, modality }),
+    // Both indexes receive text queries. The endpoint's modality describes
+    // the input being encoded, rather than the index being searched.
+    body: JSON.stringify({ text, modality: "text" }),
   });
   if (!response.ok) {
     throw new Error(`EmbeddingGemma endpoint error (${response.status}): ${await response.text()}`);
@@ -175,21 +164,23 @@ async function embedWithEmbeddingGemma(text: string, modality: "text" | "audio")
 }
 
 export async function generateTextQueryEmbedding(query: string): Promise<number[]> {
+  // The deployed corpus stores 384d MiniLM vectors; keep the query encoder aligned
+  // until the complete corpus is re-embedded with another model.
   const provider = (process.env.TEXT_EMBEDDING_PROVIDER ?? "huggingface").toLowerCase() as EmbeddingProvider;
   const model = process.env.TEXT_EMBEDDING_MODEL?.trim() || "sentence-transformers/all-MiniLM-L6-v2";
   if (provider === "openai") return embedWithOpenAI(query, model);
   if (provider === "gemini") return embedWithGemini(query, model);
   if (provider === "custom") return embedWithCustomEndpoint(query, "text");
-  if (provider === "embeddinggemma") return embedWithEmbeddingGemma(query, "text");
+  if (provider === "embeddinggemma") return embedWithEmbeddingGemma(query);
   return embedWithHuggingFace(query, model);
 }
 
 export async function generateAudioQueryEmbedding(englishQuery: string): Promise<number[]> {
-  const provider = (process.env.AUDIO_EMBEDDING_PROVIDER ?? "gemini").toLowerCase() as EmbeddingProvider;
+  const provider = (process.env.AUDIO_EMBEDDING_PROVIDER ?? "embeddinggemma").toLowerCase() as EmbeddingProvider;
   const model = process.env.AUDIO_EMBEDDING_MODEL?.trim() || "gemini-embedding-2";
   if (provider === "gemini") return embedWithGemini(englishQuery, model);
   if (provider === "openai") return embedWithOpenAI(englishQuery, model);
   if (provider === "custom") return embedWithCustomEndpoint(englishQuery, "audio");
-  if (provider === "embeddinggemma") return embedWithEmbeddingGemma(englishQuery, "audio");
+  if (provider === "embeddinggemma") return embedWithEmbeddingGemma(englishQuery);
   return embedWithHuggingFace(englishQuery, model);
 }

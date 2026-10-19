@@ -1,0 +1,13 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+fastapi==0.141.1
+uvicorn==0.52.1
+numpy==1.26.4
+pillow==12.3.0
+sentence-transformers==6.1.0
+transformers @ git+https://github.com/huggingface/transformers.git@d4804f9d76b8c071b993d813e9e87067b780cbee
+torch==2.13.0+cpu; sys_platform == "linux"
+torch==2.13.0; sys_platform != "linux"
+# AutoProcessor initializes the shared multimodal processor even for text;
+# Torchvision is needed to import it, but no vision/audio weights are loaded.
+torchvision==0.28.0+cpu; sys_platform == "linux"
+torchvision==0.28.0; sys_platform != "linux"

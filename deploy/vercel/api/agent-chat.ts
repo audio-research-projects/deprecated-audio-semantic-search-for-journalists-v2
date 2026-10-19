@@ -1,5 +1,4 @@
-import { generateText, stepCountIs, tool } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import { gateway, generateText, stepCountIs, tool } from "ai";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
 import {
@@ -50,13 +49,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   const defaultDatasetId = body.dataset_id?.trim() || undefined;
 
   try {
-    const openai = createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY?.trim(),
-    });
-    const modelName = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+    const modelName = process.env.TEXT_GENERATION_MODEL?.trim() || "openai/gpt-4o-mini";
 
     const result = await generateText({
-      model: openai(modelName),
+      model: gateway(modelName),
       system: SYSTEM_PROMPT,
       messages: messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",

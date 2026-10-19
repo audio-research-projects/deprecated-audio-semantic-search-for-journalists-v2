@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 5
 requires-python = "==3.11.*"
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -7,6 +7,10 @@ resolution-markers = [
     "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "sys_platform == 'darwin'",
 ]
+conflicts = [[
+    { package = "audio-semantic-search", extra = "embeddinggemma" },
+    { package = "audio-semantic-search", extra = "eval-deepeval" },
+]]
 
 [[package]]
 name = "a2a-sdk"
@@ -47,14 +51,15 @@ name = "accelerate"
 version = "1.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "huggingface-hub" },
+    { name = "huggingface-hub", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "huggingface-hub", version = "1.33.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "numpy" },
     { name = "packaging" },
     { name = "psutil" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8d/75/94cd5d389649578aca399e5aa822637eec18319a1dadc400ffe2f9a7493f/accelerate-1.14.0.tar.gz", hash = "sha256:41b9c4377a54e0b460a959b0defa1b736e4ca0a2373252d9a539964c2afe3c8d", size = 412167, upload-time = "2026-06-11T13:45:52.326Z" }
 wheels = [
@@ -208,6 +213,7 @@ wheels = [
 name = "audio-semantic-search"
 version = "0.1.0"
 source = { editable = "." }
+default-groups = ["dev", "ml"]
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server"] },
     { name = "aiohttp" },
@@ -231,6 +237,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+embeddinggemma = [
+    { name = "transformers", version = "5.21.0.dev0", source = { git = "https://github.com/huggingface/transformers.git?rev=d4804f9d76b8c071b993d813e9e87067b780cbee#d4804f9d76b8c071b993d813e9e87067b780cbee" } },
+]
 eval-deepeval = [
     { name = "deepeval" },
 ]
@@ -238,6 +247,10 @@ lint = [
     { name = "codespell" },
     { name = "ruff" },
     { name = "ty" },
+]
+neon = [
+    { name = "psycopg", extra = ["binary"] },
+    { name = "vercel-blob" },
 ]
 yamnet = [
     { name = "setuptools" },
@@ -268,12 +281,13 @@ ml = [
     { name = "pysentimiento" },
     { name = "sentence-transformers" },
     { name = "soundfile" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
     { name = "torchcodec" },
-    { name = "torchvision", version = "0.28.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torchvision", version = "0.28.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
-    { name = "transformers" },
+    { name = "torchvision", version = "0.28.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "torchvision", version = "0.28.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "transformers", version = "5.17.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "transformers", version = "5.21.0.dev0", source = { git = "https://github.com/huggingface/transformers.git?rev=d4804f9d76b8c071b993d813e9e87067b780cbee#d4804f9d76b8c071b993d813e9e87067b780cbee" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
     { name = "yt-dlp" },
 ]
 
@@ -297,16 +311,19 @@ requires-dist = [
     { name = "opentelemetry-resourcedetector-gcp", specifier = "<=1.12.0a0" },
     { name = "pandas", specifier = ">=2.0" },
     { name = "protobuf", specifier = ">=6.31.1,<7.0.0" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'neon'", specifier = ">=3.2,<4" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.8.0" },
     { name = "setuptools", marker = "extra == 'yamnet'", specifier = ">=70,<82" },
     { name = "tensorflow", marker = "extra == 'yamnet'", specifier = ">=2.16,<2.21" },
     { name = "tensorflow-hub", marker = "extra == 'yamnet'", specifier = ">=0.16,<0.17" },
+    { name = "transformers", marker = "extra == 'embeddinggemma'", git = "https://github.com/huggingface/transformers.git?rev=d4804f9d76b8c071b993d813e9e87067b780cbee" },
     { name = "ty", marker = "extra == 'lint'", specifier = ">=0.0.75" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.20" },
+    { name = "vercel-blob", marker = "extra == 'neon'", specifier = ">=0.5.0,<1" },
 ]
-provides-extras = ["yamnet", "eval-deepeval", "lint"]
+provides-extras = ["embeddinggemma", "neon", "yamnet", "eval-deepeval", "lint"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -419,7 +436,7 @@ name = "cffi"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "implementation_name != 'PyPy'" },
+    { name = "pycparser", marker = "implementation_name != 'PyPy' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/ef/008a1939e372c06329a3fce4279c02f328488f3526744906eeec3da7ad5f/cffi-2.1.1.tar.gz", hash = "sha256:dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be", size = 530807, upload-time = "2026-08-03T21:21:18.939Z" }
 wheels = [
@@ -473,12 +490,33 @@ wheels = [
 name = "click"
 version = "8.3.3"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "sys_platform == 'darwin'",
+]
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "(sys_platform == 'win32' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/bb/63/f9e1ea081ce35720d8b92acde70daaedace594dc93b693c869e0d5910718/click-8.3.3.tar.gz", hash = "sha256:398329ad4837b2ff7cbe1dd166a4c0f8900c3ca3a218de04466f38f6497f18a2", size = 328061, upload-time = "2026-04-22T15:11:27.506Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ae/44/c1221527f6a71a01ec6fbad7fa78f1d50dfa02217385cf0fa3eec7087d59/click-8.3.3-py3-none-any.whl", hash = "sha256:a2bf429bb3033c89fa4936ffb35d5cb471e3719e1f3c8a7c3fff0b8314305613", size = 110502, upload-time = "2026-04-22T15:11:25.044Z" },
+]
+
+[[package]]
+name = "click"
+version = "8.5.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "sys_platform == 'darwin'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c7/0e/7fa0ef50764b67090eca4114772a2abf8b6148198475e54c660b97caeee6/click-8.5.0.tar.gz", hash = "sha256:ba0d2089de75ea0310e2dde03160e6ca10009947fb95a182f9b54021bb272e34", size = 382235, upload-time = "2026-08-26T13:33:14.56Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl", hash = "sha256:255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360", size = 125251, upload-time = "2026-08-26T13:33:12.928Z" },
 ]
 
 [[package]]
@@ -531,7 +569,7 @@ name = "cryptography"
 version = "50.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "cffi", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/de/41/6cbdcf9142d00fe82836fbb51e503e58088575cf7a0fe1dbff6695bf0840/cryptography-50.0.0.tar.gz", hash = "sha256:eeac2acb5a20ed25e0ad6d1df9891a520b78b404266b6d11778f25d5d691a6c9", size = 880201, upload-time = "2026-07-31T14:25:10.11Z" }
 wheels = [
@@ -620,7 +658,8 @@ dependencies = [
     { name = "filelock" },
     { name = "fsspec", extra = ["http"] },
     { name = "httpx" },
-    { name = "huggingface-hub" },
+    { name = "huggingface-hub", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "huggingface-hub", version = "1.33.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "multiprocess" },
     { name = "numpy" },
     { name = "packaging" },
@@ -651,7 +690,7 @@ version = "4.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
-    { name = "click" },
+    { name = "click", version = "8.3.3", source = { registry = "https://pypi.org/simple" } },
     { name = "grpcio" },
     { name = "jinja2" },
     { name = "nest-asyncio" },
@@ -946,7 +985,8 @@ dependencies = [
     { name = "aiohttp" },
     { name = "aiosqlite" },
     { name = "authlib" },
-    { name = "click" },
+    { name = "click", version = "8.3.3", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "click", version = "8.5.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "fastapi" },
     { name = "google-auth", extra = ["pyopenssl"] },
     { name = "google-genai" },
@@ -1717,6 +1757,19 @@ wheels = [
 ]
 
 [[package]]
+name = "httpcore2"
+version = "2.14.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "h11", marker = "sys_platform != 'emscripten' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "truststore", marker = "sys_platform != 'emscripten' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/30/ff/b53af1b49bb2cb5fa97c92215614b173ca5c1a99ded80e2d52f15a94fa6d/httpcore2-2.14.0.tar.gz", hash = "sha256:4f57a1a8249fe6af589d935cfd456f1d13bbdcb0f0fc72af9142368fc94811d7", size = 69096, upload-time = "2026-10-18T16:29:21.898Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/02/06/a8d6a8f90d11b76d9086242b6bb0ee4b503473bfc8be34c2d5b067275c22/httpcore2-2.14.0-py3-none-any.whl", hash = "sha256:4c4f64f4b544afeb778c42c0ffb5941b29e671157e90ed3f6dc787c4bca90cd1", size = 84291, upload-time = "2026-10-18T16:29:19.743Z" },
+]
+
+[[package]]
 name = "httptools"
 version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1756,23 +1809,71 @@ wheels = [
 ]
 
 [[package]]
+name = "httpx2"
+version = "2.14.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio", marker = "sys_platform != 'emscripten' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "httpcore2", marker = "sys_platform != 'emscripten' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "idna" },
+    { name = "truststore", marker = "sys_platform != 'emscripten' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e8/67/58353f1848b4ba568e1ec22ea1e0d8e039f0bca5fde7e2d1f07739fd83e7/httpx2-2.14.0.tar.gz", hash = "sha256:47ad61a3c40282cd8d0dc96311531f00f5bfc71a066c6fe3b36d8f63fb9e4f6e", size = 102036, upload-time = "2026-10-18T16:29:22.627Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/69/5a/469616aa8c2cbb0bb9dd67a3c18d07c01ab604cc0b236ee1c47d260c7f6e/httpx2-2.14.0-py3-none-any.whl", hash = "sha256:9d20c13a10bae1773a0be3b0f1e5beeb4bdd549bc3a2ba18efa32897c65403e4", size = 96901, upload-time = "2026-10-18T16:29:20.819Z" },
+]
+
+[[package]]
 name = "huggingface-hub"
 version = "1.16.1"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "sys_platform == 'darwin'",
+]
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "hf-xet", marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'" },
-    { name = "httpx" },
-    { name = "packaging" },
-    { name = "pyyaml" },
-    { name = "tqdm" },
-    { name = "typer" },
-    { name = "typing-extensions" },
+    { name = "filelock", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "fsspec", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "hf-xet", marker = "(platform_machine == 'AMD64' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (platform_machine == 'aarch64' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (platform_machine == 'amd64' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (platform_machine == 'arm64' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (platform_machine == 'x86_64' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "httpx", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "packaging", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "pyyaml", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "tqdm", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "typer", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "typing-extensions", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/48/0f/ed994dbade67a54407c28cab96ef845e0e6d25500be56aca6394f8bfc9dd/huggingface_hub-1.16.1.tar.gz", hash = "sha256:7f1dc4c5ec21aed69be630ad0c3378616be16f3de1a47b141c0e812965d9c832", size = 792534, upload-time = "2026-05-21T18:40:00.908Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/79/621a7dbb80c70974f73a597275351ebe03ce5bc65cb5f8f4acb5859252bc/huggingface_hub-1.16.1-py3-none-any.whl", hash = "sha256:64340de934b9ce37857ef85a82de72f5629e8a270f9119eabb12bf495eb53c22", size = 668176, upload-time = "2026-05-21T18:39:58.596Z" },
+]
+
+[[package]]
+name = "huggingface-hub"
+version = "1.33.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "sys_platform == 'darwin'",
+]
+dependencies = [
+    { name = "click", version = "8.5.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "filelock", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "fsspec", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "hf-xet", marker = "(platform_machine == 'AMD64' and extra == 'extra-21-audio-semantic-search-embeddinggemma') or (platform_machine == 'AMD64' and extra != 'extra-21-audio-semantic-search-eval-deepeval') or (platform_machine == 'aarch64' and extra == 'extra-21-audio-semantic-search-embeddinggemma') or (platform_machine == 'aarch64' and extra != 'extra-21-audio-semantic-search-eval-deepeval') or (platform_machine == 'amd64' and extra == 'extra-21-audio-semantic-search-embeddinggemma') or (platform_machine == 'amd64' and extra != 'extra-21-audio-semantic-search-eval-deepeval') or (platform_machine == 'arm64' and extra == 'extra-21-audio-semantic-search-embeddinggemma') or (platform_machine == 'arm64' and extra != 'extra-21-audio-semantic-search-eval-deepeval') or (platform_machine == 'x86_64' and extra == 'extra-21-audio-semantic-search-embeddinggemma') or (platform_machine == 'x86_64' and extra != 'extra-21-audio-semantic-search-eval-deepeval') or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "httpx", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "packaging", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "pyyaml", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "tqdm", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "typing-extensions", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/25/2a/484d112c0d8fc5f665d7b65137ac9cdb2953c982391598c3597968a12ee7/huggingface_hub-1.33.0.tar.gz", hash = "sha256:367be21a201db9523eddf8aeac7048f2602c1b308691c97640d5e72ed188007e", size = 1043548, upload-time = "2026-09-24T09:49:29.971Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/16/963096d224b80909432dc16561a615fd33d2d13beef3ce4c63fa25e40867/huggingface_hub-1.33.0-py3-none-any.whl", hash = "sha256:04e434b06e100eddbce9a6e817d72693a7884b10a79bd67ab48080d5c07eb899", size = 846435, upload-time = "2026-09-24T09:49:28.059Z" },
 ]
 
 [[package]]
@@ -1990,7 +2091,8 @@ dependencies = [
     { name = "soundfile" },
     { name = "torchlibrosa" },
     { name = "tqdm" },
-    { name = "transformers" },
+    { name = "transformers", version = "5.17.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "transformers", version = "5.21.0.dev0", source = { git = "https://github.com/huggingface/transformers.git?rev=d4804f9d76b8c071b993d813e9e87067b780cbee#d4804f9d76b8c071b993d813e9e87067b780cbee" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
     { name = "wandb" },
     { name = "webdataset" },
     { name = "wget" },
@@ -2180,7 +2282,7 @@ dependencies = [
     { name = "anyio" },
     { name = "distro" },
     { name = "httpx" },
-    { name = "orjson", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "orjson", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
     { name = "packaging" },
     { name = "pydantic" },
     { name = "requests" },
@@ -2256,7 +2358,8 @@ version = "1.85.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
-    { name = "click" },
+    { name = "click", version = "8.3.3", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "click", version = "8.5.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "fastuuid" },
     { name = "httpx" },
     { name = "importlib-metadata" },
@@ -2532,7 +2635,8 @@ name = "nltk"
 version = "3.10.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
+    { name = "click", version = "8.3.3", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "click", version = "8.5.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "defusedxml" },
     { name = "joblib" },
     { name = "regex" },
@@ -2621,10 +2725,10 @@ dependencies = [
     { name = "numba" },
     { name = "numpy" },
     { name = "tiktoken" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
     { name = "tqdm" },
-    { name = "triton", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'linux2'" },
+    { name = "triton", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or sys_platform == 'linux2' or (sys_platform != 'linux' and extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/35/8e/d36f8880bcf18ec026a55807d02fe4c7357da9f25aebd92f85178000c0dc/openai_whisper-20250625.tar.gz", hash = "sha256:37a91a3921809d9f44748ffc73c0a55c9f366c85a3ef5c2ae0cc09540432eb96", size = 803191, upload-time = "2025-06-26T01:06:13.34Z" }
 
@@ -2947,7 +3051,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "python-dateutil" },
-    { name = "tzdata", marker = "sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "tzdata", marker = "sys_platform == 'emscripten' or sys_platform == 'win32' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/be/4f/5f3422a2afec5ffc46308b79e53291365a93748b498ac2e58bead0197916/pandas-3.0.5.tar.gz", hash = "sha256:dca3734d6ab7c906e6730f0788b0a1dbb9f2467731f9711f77995c8e9d62d712", size = 4658219, upload-time = "2026-07-22T22:19:28.819Z" }
 wheels = [
@@ -3163,6 +3267,42 @@ wheels = [
 ]
 
 [[package]]
+name = "psycopg"
+version = "3.3.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+    { name = "tzdata", marker = "sys_platform == 'win32' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/76/26/3ea4ca5eaea1c0debcdf7ee7c1613fbe721dc27a03c461c0817ffd8a0601/psycopg-3.3.6.tar.gz", hash = "sha256:c081f2250df751a943036e42db6df4571c66cd0aabe8291a7a506512b12007d2", size = 168171, upload-time = "2026-09-18T13:22:55.152Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/de/748bd7609c71cae5d737f0ba9192f19329f70180ecda8fff3cac02c5abe3/psycopg-3.3.6-py3-none-any.whl", hash = "sha256:a1db9f7148b06a28606767efaca51fa6f9398c5c0a3810519be69d7000bdb631", size = 215490, upload-time = "2026-09-18T13:15:29.374Z" },
+]
+
+[package.optional-dependencies]
+binary = [
+    { name = "psycopg-binary", marker = "implementation_name != 'pypy' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+]
+
+[[package]]
+name = "psycopg-binary"
+version = "3.3.6"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/86/b71166048974d49c6d136b2ed1c0e5bec0b974d8c4de5cbce7e86a9e412a/psycopg_binary-3.3.6-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:be4f9b3c9338ac5dd217c5847e21521b396c8117f78dc420d495a5c49bbef874", size = 4728002, upload-time = "2026-09-18T13:16:53.393Z" },
+    { url = "https://files.pythonhosted.org/packages/12/1d/1e06c0de7ed5aed898acb87544eac6ef0bc7d752a67ec6e5d6b835e9b40c/psycopg_binary-3.3.6-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:f0535693ce476a722b718b002d5d2c27d47e71ca945276ac194409c98e74c492", size = 4775403, upload-time = "2026-09-18T13:16:58.939Z" },
+    { url = "https://files.pythonhosted.org/packages/84/02/2ffcbc43f8e4bbc38e5286a22013bcac01898d13cd38325f60dd5428a8af/psycopg_binary-3.3.6-cp311-cp311-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:3c9e663b2e800e3218994cf948c11bcc2844e6491b34aa80d089baf6531827bf", size = 5594145, upload-time = "2026-09-18T13:17:08.515Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/25/031dae2c7d2e7e77dcf5b1962c1e0684fa548d7af0ff6707b6b5e6054ca7/psycopg_binary-3.3.6-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:a2e44a342d2aee40508e28a563d8961c39d9bbd8cae36d8578f0a3c6658aab0f", size = 5267985, upload-time = "2026-09-18T13:17:16.24Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/e5/94c89ada3c003a4d858178f3bba49a35e0297ef2aad659b80eb5e380e690/psycopg_binary-3.3.6-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:5f598f19fa9a91540b5cee17932ffd227b7b53a481605bcc4573c0eafa647300", size = 6860986, upload-time = "2026-09-18T13:17:23.348Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/a0/81bf499d095adee8413bd19822a6872fbfa21663ec78014a68d83a8db83c/psycopg_binary-3.3.6-cp311-cp311-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:6ff05561e4a067d35507dc5c90f1deb2ec1c9703ac5cccc1bc26e08a197f9c5a", size = 5106702, upload-time = "2026-09-18T13:17:28.847Z" },
+    { url = "https://files.pythonhosted.org/packages/00/75/99d56da64c27bd985fd82c6ecbf7976b724ac638fdd1654ef995323a1a26/psycopg_binary-3.3.6-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:566dd827f17728efdf7d88a5b066f815170f6fdad13967ae952842d90e6aaa9f", size = 4627090, upload-time = "2026-09-18T13:17:36.668Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/0c/0222171d11233332c6a24b1cef1578215f0ffddf3642eb8dd8c4448ad69f/psycopg_binary-3.3.6-cp311-cp311-musllinux_1_2_ppc64le.whl", hash = "sha256:9b2f11794e017ce340934e35de46181c46ef71ec75ea3d85dd75cd836761c01e", size = 4320353, upload-time = "2026-09-18T13:17:42.526Z" },
+    { url = "https://files.pythonhosted.org/packages/62/6f/e1cc2a28dd1228c67c969ba6fd37cd8726b312e2ff51380f847ddb38ccde/psycopg_binary-3.3.6-cp311-cp311-musllinux_1_2_riscv64.whl", hash = "sha256:910ace140e3e7b7596898d083f37a8fe90c5c40684252ad4e682364b2cd3deba", size = 4047253, upload-time = "2026-09-18T13:17:47.068Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/fd/38b64790ce7a515b1dbd2bab3d119637a858aeb22c380cf4859bc4ce0e42/psycopg_binary-3.3.6-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:37e517c146b185f9c0c6e8d0a0ebbdeeeb67896af28466e032bc810d0c7dc7a7", size = 4353208, upload-time = "2026-09-18T13:17:52.41Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/dc/45386530ceb2a8c789a226de9b9b34eca8fccf1feba2e4ef68a6aca50c56/psycopg_binary-3.3.6-cp311-cp311-win_amd64.whl", hash = "sha256:c7f92daa0d2a1c76f07264abddf8cbabd30152a2f09c3270e50f0c7efdf5dcac", size = 3675638, upload-time = "2026-09-18T13:17:58.112Z" },
+]
+
+[[package]]
 name = "pyarrow"
 version = "25.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3310,9 +3450,10 @@ dependencies = [
     { name = "datasets" },
     { name = "emoji" },
     { name = "spacy" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
-    { name = "transformers" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "transformers", version = "5.17.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "transformers", version = "5.21.0.dev0", source = { git = "https://github.com/huggingface/transformers.git?rev=d4804f9d76b8c071b993d813e9e87067b780cbee#d4804f9d76b8c071b993d813e9e87067b780cbee" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ff/14/f5209bc64b34500145cc7d06eeb8e4f65e1baceff3b051ab14688f6b69bb/pysentimiento-0.7.3.tar.gz", hash = "sha256:0742cb8c78e500aa9cb3bb414a1d41c98bbac363c78b2a9d215c0bb401259e50", size = 30552, upload-time = "2024-03-04T16:50:37.876Z" }
 wheels = [
@@ -3324,7 +3465,7 @@ name = "pytest"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
     { name = "iniconfig" },
     { name = "packaging" },
     { name = "pluggy" },
@@ -3753,15 +3894,17 @@ name = "sentence-transformers"
 version = "6.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "huggingface-hub" },
+    { name = "huggingface-hub", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "huggingface-hub", version = "1.33.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "numpy" },
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "tokenizers" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
     { name = "tqdm" },
-    { name = "transformers" },
+    { name = "transformers", version = "5.17.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "transformers", version = "5.21.0.dev0", source = { git = "https://github.com/huggingface/transformers.git?rev=d4804f9d76b8c071b993d813e9e87067b780cbee#d4804f9d76b8c071b993d813e9e87067b780cbee" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c4/a1/53ae87971817e2d8370f8e79b843a881be33ab339502d71c5f82ac31f7af/sentence_transformers-6.1.0.tar.gz", hash = "sha256:299025df51550dc1a38f05be27a9b0bf881c4e5e70542b3b7757d05e00aa3868", size = 576566, upload-time = "2026-09-18T10:44:24.279Z" }
@@ -3887,7 +4030,8 @@ version = "3.8.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "catalogue" },
-    { name = "click" },
+    { name = "click", version = "8.3.3", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "click", version = "8.5.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "confection" },
     { name = "cymem" },
     { name = "jinja2" },
@@ -3941,7 +4085,7 @@ name = "sqlalchemy"
 version = "2.0.51"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'" },
+    { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/02/f1/a7a892f18d4d224e6b26f706531eafccc41e37594d37d304786969ee13cb/sqlalchemy-2.0.51.tar.gz", hash = "sha256:804dccd8a4a6242c4e30ad961e540e18a588f6527202f2d6791b01845d59fdc9", size = 9912201, upload-time = "2026-06-15T15:41:20.012Z" }
@@ -4201,7 +4345,8 @@ name = "tokenizers"
 version = "0.23.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "huggingface-hub" },
+    { name = "huggingface-hub", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "huggingface-hub", version = "1.33.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e0/7c/2cabb2174e772636683008f2c5621949b645da7d303c596589e84516a184/tokenizers-0.23.3.tar.gz", hash = "sha256:cded33237c77caeef62944d32aa9a7ef42bdce2b3497e18d137e072a8c4be438", size = 385286, upload-time = "2026-10-09T10:16:55.759Z" }
 wheels = [
@@ -4231,13 +4376,13 @@ resolution-markers = [
     "sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "filelock", marker = "sys_platform == 'darwin'" },
-    { name = "fsspec", marker = "sys_platform == 'darwin'" },
-    { name = "jinja2", marker = "sys_platform == 'darwin'" },
-    { name = "networkx", marker = "sys_platform == 'darwin'" },
-    { name = "setuptools", marker = "sys_platform == 'darwin'" },
-    { name = "sympy", marker = "sys_platform == 'darwin'" },
-    { name = "typing-extensions", marker = "sys_platform == 'darwin'" },
+    { name = "filelock", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "fsspec", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "jinja2", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "networkx", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "setuptools", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "sympy", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "typing-extensions", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.13.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:e76f9bcecc52b8ff711239a2f7547d5353df95878ab232f0773c1d95928b92f8", upload-time = "2026-07-08T12:26:13Z" },
@@ -4253,13 +4398,13 @@ resolution-markers = [
     "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "filelock", marker = "sys_platform != 'darwin'" },
-    { name = "fsspec", marker = "sys_platform != 'darwin'" },
-    { name = "jinja2", marker = "sys_platform != 'darwin'" },
-    { name = "networkx", marker = "sys_platform != 'darwin'" },
-    { name = "setuptools", marker = "sys_platform != 'darwin'" },
-    { name = "sympy", marker = "sys_platform != 'darwin'" },
-    { name = "typing-extensions", marker = "sys_platform != 'darwin'" },
+    { name = "filelock", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "fsspec", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "jinja2", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "networkx", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "setuptools", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "sympy", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "typing-extensions", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.13.0%2Bcpu-cp311-cp311-linux_s390x.whl", hash = "sha256:6e9817dbdf5ea76789babd46e457eac5bf14ff566cf85f8addbfdff2d56601ce", upload-time = "2026-07-08T19:27:52Z" },
@@ -4301,9 +4446,9 @@ resolution-markers = [
     "sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy", marker = "sys_platform == 'darwin'" },
-    { name = "pillow", marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
+    { name = "numpy", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "pillow", marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.28.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:83fe6c020866a85acd7d97deccc45ff11d66daf42916d04396a4309c66c0ccb8", upload-time = "2026-07-08T12:26:40Z" },
@@ -4319,9 +4464,9 @@ resolution-markers = [
     "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", marker = "sys_platform != 'darwin'" },
-    { name = "pillow", marker = "sys_platform != 'darwin'" },
-    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+    { name = "numpy", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "pillow", marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.28.0%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:22958193d72444ed7cbcc665ba4821a31e5279f9c4d1ad08520918b30896b78a", upload-time = "2026-07-08T12:26:39Z" },
@@ -4334,7 +4479,7 @@ name = "tqdm"
 version = "4.70.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/21/3b/6c24bec5be5e743ffd99576daa5cc077722fc7d5bbc00bd133fa0c698dc6/tqdm-4.70.0.tar.gz", hash = "sha256:55b0b0dbd97462d06ebee91e4dac24ed4d4702be82b24f07e6c1d27e08cea220", size = 795438, upload-time = "2026-07-27T11:33:15.271Z" }
 wheels = [
@@ -4345,20 +4490,49 @@ wheels = [
 name = "transformers"
 version = "5.17.0"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "sys_platform == 'darwin'",
+]
 dependencies = [
-    { name = "huggingface-hub" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pyyaml" },
-    { name = "regex" },
-    { name = "safetensors" },
-    { name = "tokenizers" },
-    { name = "tqdm" },
-    { name = "typer" },
+    { name = "huggingface-hub", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "huggingface-hub", version = "1.33.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (extra != 'extra-21-audio-semantic-search-embeddinggemma' and extra != 'extra-21-audio-semantic-search-eval-deepeval')" },
+    { name = "numpy", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "packaging", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "pyyaml", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "regex", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "safetensors", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "tokenizers", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "tqdm", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "typer", marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval' or extra != 'extra-21-audio-semantic-search-embeddinggemma'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0e/9e/750649904a065007a838981785b2bd8d9ff26154c6c341ac67d0b7f82c68/transformers-5.17.0.tar.gz", hash = "sha256:a153be279169b55b92d8000bf4af294aed684503d091cca7804da2dd8a9de000", size = 9817878, upload-time = "2026-09-09T15:39:56.886Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e8/d0/c502b60d684adbd98a8dc7d5bb866842772b816ac4354e4608be240041ae/transformers-5.17.0-py3-none-any.whl", hash = "sha256:78ec1ce21579b38dfb83950a0658cd119f87212a2fcfdff478096ce9d6c03801", size = 12295140, upload-time = "2026-09-09T15:39:53.746Z" },
+]
+
+[[package]]
+name = "transformers"
+version = "5.21.0.dev0"
+source = { git = "https://github.com/huggingface/transformers.git?rev=d4804f9d76b8c071b993d813e9e87067b780cbee#d4804f9d76b8c071b993d813e9e87067b780cbee" }
+resolution-markers = [
+    "sys_platform == 'win32'",
+    "sys_platform == 'emscripten'",
+    "sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "sys_platform == 'darwin'",
+]
+dependencies = [
+    { name = "huggingface-hub", version = "1.33.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "numpy", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "packaging", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "pyyaml", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "regex", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "safetensors", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "tokenizers", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "tqdm", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
+    { name = "typer", marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma'" },
 ]
 
 [[package]]
@@ -4368,6 +4542,15 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/f9/19d842d06a08559534fa1eaab6ca551b1bcf40f06620bddec1babaa2772d/triton-3.7.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d4a0e1cd4c4a76370ed74a8432a53cea28716827d19e40ffc732233e35ceb3f6", size = 184664887, upload-time = "2026-06-17T20:03:42.913Z" },
     { url = "https://files.pythonhosted.org/packages/cd/5e/fce69606f7f240297f163e25539906732b199530d486ce67ae319877e821/triton-3.7.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6744957e9fd610a29680ec2346057d0c86948ed3812468670719f391e94b44a5", size = 197701306, upload-time = "2026-06-17T19:53:13.673Z" },
+]
+
+[[package]]
+name = "truststore"
+version = "0.10.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/9f/c5201d42a484c061e528825fc8e2d565f5abd50a4ced6fb7d29c4ec99b2b/truststore-0.10.5.tar.gz", hash = "sha256:30d36967ccaded5cbb38d602c433f53600036c79d502f4533a49b60a03bbefcd", size = 28091, upload-time = "2026-10-12T22:27:31.808Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/e9/3a7820be2bb0fe53b6bc9c3be26d3d1158004e4c3ab953aa6840b955b1e9/truststore-0.10.5-py3-none-any.whl", hash = "sha256:9aaaedaefaf06d8b206278cf8b5012bc897f485a874503501e12d776df78951c", size = 19017, upload-time = "2026-10-12T22:27:30.377Z" },
 ]
 
 [[package]]
@@ -4401,7 +4584,7 @@ version = "0.27.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
     { name = "rich" },
     { name = "shellingham" },
 ]
@@ -4458,7 +4641,7 @@ name = "tzlocal"
 version = "5.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tzdata", marker = "sys_platform == 'win32'" },
+    { name = "tzdata", marker = "sys_platform == 'win32' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/81/5b/879b2f932adfa7a053c360d50bc896c977fa6426109185f7c12ebdd0cb9d/tzlocal-5.4.4.tar.gz", hash = "sha256:8dbb8660838688a7b6ba4fed31d18dedf842afb4d47ca050d6d891c2c15f3be4", size = 31170, upload-time = "2026-06-29T08:03:40.026Z" }
 wheels = [
@@ -4509,7 +4692,8 @@ name = "uvicorn"
 version = "0.52.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
+    { name = "click", version = "8.3.3", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "click", version = "8.5.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "h11" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/03/18/ccce41535dee1be77735592bd19965f3972c82e07ee703d324709496b716/uvicorn-0.52.1.tar.gz", hash = "sha256:112ec661814189acbccd3f7b86460147cc065fc92c0821afa78918780e4354dd", size = 100571, upload-time = "2026-08-01T18:19:30.732Z" }
@@ -4522,7 +4706,7 @@ standard = [
     { name = "httptools" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "uvloop", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'" },
+    { name = "uvloop", marker = "(platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (platform_python_implementation == 'PyPy' and extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (sys_platform == 'cygwin' and extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval') or (sys_platform == 'win32' and extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
     { name = "watchfiles" },
     { name = "websockets" },
 ]
@@ -4539,6 +4723,59 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/74/4f/256aca690709e9b008b7108bc85fba619a2bc37c6d80743d18abad16ee09/uvloop-0.22.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:56a2d1fae65fd82197cb8c53c367310b3eabe1bbb9fb5a04d28e3e3520e4f702", size = 3804529, upload-time = "2025-10-16T22:16:25.246Z" },
     { url = "https://files.pythonhosted.org/packages/7f/74/03c05ae4737e871923d21a76fe28b6aad57f5c03b6e6bfcfa5ad616013e4/uvloop-0.22.1-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:40631b049d5972c6755b06d0bfe8233b1bd9a8a6392d9d1c45c10b6f9e9b2733", size = 3621267, upload-time = "2025-10-16T22:16:26.819Z" },
     { url = "https://files.pythonhosted.org/packages/75/be/f8e590fe61d18b4a92070905497aec4c0e64ae1761498cad09023f3f4b3e/uvloop-0.22.1-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:535cc37b3a04f6cd2c1ef65fa1d370c9a35b6695df735fcff5427323f2cd5473", size = 3723105, upload-time = "2025-10-16T22:16:28.252Z" },
+]
+
+[[package]]
+name = "vercel-blob"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "httpx2" },
+    { name = "pydantic" },
+    { name = "vercel-internal-core" },
+    { name = "vercel-oidc" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/41/e54e2742da6bdea10cc1fce7b14cc11ca423751cee8f25574aaf9210fe62/vercel_blob-0.5.0.tar.gz", hash = "sha256:0e42ceba8f0aa51aeb67fa1c86dc3ba4a4a078326bd2272c09580a9756231acb", size = 31933, upload-time = "2026-10-15T16:37:59.62Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/2e/6f9495befa200eb6c4b29102fa5f1be3d1094d62d53d39b9b4586e1585c3/vercel_blob-0.5.0-py3-none-any.whl", hash = "sha256:12168f22d2497916574d67ac955d99a0c7ed6d4291b988a51416e15d07d282ed", size = 36162, upload-time = "2026-10-15T16:37:58.588Z" },
+]
+
+[[package]]
+name = "vercel-headers"
+version = "0.7.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/0c/241e47d351413c108f0b411df087feeb15cf32f422000414ce24d3791537/vercel_headers-0.7.2.tar.gz", hash = "sha256:f5255da014032b357a3f18769bd19ff675b0ee3e4fc355c6bbd574dfc674222d", size = 6148, upload-time = "2026-09-08T17:09:14.589Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/64/12d53f70253dfd00f1a394bc930b5d55bad84ac17c9fc77b5ca0525ccd18/vercel_headers-0.7.2-py3-none-any.whl", hash = "sha256:26dcb0016b5c553e638385e532cb8557f071e247b46f2575d5737e48718dc8c6", size = 3922, upload-time = "2026-09-08T17:09:13.585Z" },
+]
+
+[[package]]
+name = "vercel-internal-core"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "httpx2" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ff/2d/e52e4c5a8cc53843b8749dc09d169a00b5aaa428d98d2c71dee95efcaba2/vercel_internal_core-0.2.2.tar.gz", hash = "sha256:cf20141dd5cb67cdf0892d4f96a4b25dc7cf26469c72c00f26f6fc504c945e6e", size = 20275, upload-time = "2026-10-15T16:22:53.598Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/21/cb413aa5bd2fdec9a9e9976d5c31ec0c5e54060a18d9608eb089b4da67fa/vercel_internal_core-0.2.2-py3-none-any.whl", hash = "sha256:581b02309ec8d6367134c3ecabba5d8169a902677458e228f544dc88dfa05a6b", size = 24767, upload-time = "2026-10-15T16:22:52.748Z" },
+]
+
+[[package]]
+name = "vercel-oidc"
+version = "0.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "httpx2" },
+    { name = "vercel-headers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6e/74/d2dfab8dccf6df6db894df598edf1f3f3bc41406efc7e9c1d464b8e2a211/vercel_oidc-0.10.0.tar.gz", hash = "sha256:24310f5ce5db05455bcac82ff6cb0cb254b28af93dacb526cc375a9403aca6ee", size = 16591, upload-time = "2026-10-06T18:38:02.295Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/ab/dab581dd1c0e1340048c1d95ca7862e007a0f84302ae8bfe3fac6f97be0f/vercel_oidc-0.10.0-py3-none-any.whl", hash = "sha256:abc8317317482e542834ab35883e8c4a0f9a1baea554898e3f041ca037f90bec", size = 16554, upload-time = "2026-10-06T18:38:01.422Z" },
 ]
 
 [[package]]
@@ -4561,7 +4798,8 @@ name = "wandb"
 version = "0.28.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
+    { name = "click", version = "8.3.3", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-eval-deepeval'" },
+    { name = "click", version = "8.5.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-21-audio-semantic-search-embeddinggemma' or extra != 'extra-21-audio-semantic-search-eval-deepeval'" },
     { name = "packaging" },
     { name = "platformdirs" },
     { name = "protobuf" },
@@ -4589,7 +4827,7 @@ name = "wasabi"
 version = "1.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-21-audio-semantic-search-embeddinggemma' and extra == 'extra-21-audio-semantic-search-eval-deepeval')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ac/f9/054e6e2f1071e963b5e746b48d1e3727470b2a490834d18ad92364929db3/wasabi-1.1.3.tar.gz", hash = "sha256:4bb3008f003809db0c3e28b4daf20906ea871a2bb43f9914197d540f4f2e0878", size = 30391, upload-time = "2024-05-31T16:56:18.99Z" }
 wheels = [

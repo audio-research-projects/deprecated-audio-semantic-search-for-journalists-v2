@@ -7,3 +7,4 @@ dist-web/
 .env
 .env.*
 !.env.example
+.env*

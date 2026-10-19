@@ -3,13 +3,13 @@
 Paralelo a ``scripts/publish_dataset_release.py`` (que publica en Cloud Storage para GCP),
 este script toma el directorio local generado por ``src/simple_dataset_pipeline.py`` y:
 
-1. Sube opcionalmente ``segment_clips/*.opus`` a Vercel Blob (si se define ``BLOB_READ_WRITE_TOKEN``)
-   o construye URLs públicas desde ``--clips-base-url``.
+1. Sube opcionalmente ``segment_clips/*.opus`` a un store privado de Vercel Blob (OIDC o token RW)
+   o construye URLs desde ``--clips-base-url``.
 2. Crea las tablas e índices ``pgvector`` en Neon (``deploy/vercel/db/schema.sql``).
 3. Inserta los metadatos de segmentos, vectores de texto/audio y el índice invertido de YAMNet.
 
 Uso:
-    uv run --with 'psycopg[binary]' python scripts/publish_dataset_neon.py \\
+    uv run --extra neon python scripts/publish_dataset_neon.py \\
         --dataset ./dataset \\
         --dataset-id default \\
         --label "Archivo Periodístico"
@@ -23,14 +23,13 @@ import os
 import sys
 from pathlib import Path
 
-import httpx
 from dotenv import load_dotenv
 
 from src.neon_exporter import (
     PreparedDatasetBundle,
     prepare_dataset_bundle,
     publish_bundle_to_neon,
-    upload_clip_to_vercel_blob,
+    upload_clips_to_vercel_blob,
 )
 from src.publish_dataset_release_utils import default_release_name
 from src.segment_clips import CLIP_DIR_NAME
@@ -59,34 +58,35 @@ def publish_processed_dataset(
     """
     release = release or default_release_name(dataset_dir)
     clips_dir = dataset_dir / CLIP_DIR_NAME
-    blob_token = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip()
+    has_blob_credentials = bool(
+        os.getenv("BLOB_READ_WRITE_TOKEN", "").strip()
+        or (os.getenv("VERCEL_OIDC_TOKEN", "").strip() and os.getenv("BLOB_STORE_ID", "").strip())
+    )
     clips_base_url = clips_base_url.strip().rstrip("/")
 
     clip_urls: dict[str, str] = {}
     if not skip_clips and clips_dir.is_dir():
-        if blob_token and not dry_run:
+        if has_blob_credentials and not dry_run:
             clips = sorted(clips_dir.glob("segment_*.opus"))
-            logger.info("Subiendo %d clips a Vercel Blob...", len(clips))
-            with httpx.Client(timeout=60.0) as http_client:
-                for clip_path in clips:
-                    clip_urls[clip_path.name] = upload_clip_to_vercel_blob(
-                        clip_path,
-                        dataset_id=dataset_id,
-                        release=release,
-                        blob_token=blob_token,
-                        client=http_client,
-                    )
+            logger.info("Sincronizando %d clips con Vercel Blob privado...", len(clips))
+            clip_urls.update(
+                upload_clips_to_vercel_blob(
+                    clips,
+                    dataset_id=dataset_id,
+                    release=release,
+                )
+            )
         elif clips_base_url:
             for clip_path in sorted(clips_dir.glob("segment_*.opus")):
                 clip_urls[clip_path.name] = f"{clips_base_url}/{clip_path.name}"
-        elif blob_token and dry_run:
+        elif has_blob_credentials and dry_run:
             for clip_path in sorted(clips_dir.glob("segment_*.opus")):
                 clip_urls[clip_path.name] = (
                     f"https://blob.vercel-storage.com/audio-search/{dataset_id}/{release}/{CLIP_DIR_NAME}/{clip_path.name}"
                 )
         else:
             logger.warning(
-                "Sin BLOB_READ_WRITE_TOKEN ni --clips-base-url: los segmentos se publicarán sin clip_url."
+                "Sin credenciales Blob (OIDC o RW token) ni --clips-base-url: los segmentos se publicarán sin clip_url."
             )
 
     return prepare_dataset_bundle(
@@ -104,6 +104,7 @@ def publish_processed_dataset(
 def main() -> int:
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter

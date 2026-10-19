@@ -1,6 +1,13 @@
 import { withEve } from "eve/vercel";
 
-export default await withEve({
+const embeddingBinding = {
+  type: "service",
+  service: "embeddings",
+  format: "url",
+  env: "EMBEDDINGGEMMA_SERVICE_URL",
+} as const;
+
+const config = await withEve({
   services: {
     // Vite SPA (web/). Vercel does not build api/ inside a service, so the
     // API is a separate Express-backed service below.
@@ -19,6 +26,20 @@ export default await withEve({
       // Override the inherited `npm run build` (= eve build): the Express
       // builder bundles server.ts itself; typecheck is the only useful step.
       buildCommand: "npm run typecheck",
+      bindings: [embeddingBinding],
+    },
+    embeddings: {
+      framework: "fastapi",
+      root: "embeddinggemma-service",
+      entrypoint: "main:app",
+      buildCommand: "python prepare_model.py",
+      functions: {
+        "main.py": {
+          memory: 2048,
+          maxDuration: 300,
+          includeFiles: "model/**",
+        },
+      },
     },
   },
   routes: [
@@ -27,3 +48,14 @@ export default await withEve({
     { src: "^(.*)$", destination: { type: "service", service: "web" } },
   ],
 });
+
+export default {
+  ...config,
+  services: {
+    ...config.services,
+    eve: {
+      ...config.services.eve,
+      bindings: [embeddingBinding],
+    },
+  },
+};

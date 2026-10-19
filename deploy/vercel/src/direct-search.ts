@@ -11,6 +11,7 @@ import {
   searchYamnetNeon,
   type SearchIndex,
 } from "./db.js";
+import { gateway, generateText } from "ai";
 
 export interface SearchPlan {
   original_query: string;
@@ -90,9 +91,6 @@ export function effectivePlan(request: DirectSearchRequest): SearchPlan {
 export async function rewriteSearchPlanWithLLM(request: DirectSearchRequest): Promise<SearchPlan> {
   if (!request.rewrite || request.plan) return effectivePlan(request);
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return effectivePlan(request);
-
   const prompt = [
     "DIRECT_SEARCH_PLANNER_V1",
     "Generá exclusivamente un plan de búsqueda en formato JSON para el archivo periodístico de audio.",
@@ -101,30 +99,15 @@ export async function rewriteSearchPlanWithLLM(request: DirectSearchRequest): Pr
     `Consulta original: ${JSON.stringify(request.query)}`,
   ].join("\n");
 
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      response_format: { type: "json_object" },
-      messages: [{ role: "user", content: prompt }],
-    }),
+  const model = process.env.TEXT_GENERATION_MODEL?.trim() || "openai/gpt-4o-mini";
+  const response = await generateText({
+    model: gateway(model),
+    temperature: 0,
+    prompt,
   });
-
-  if (!response.ok) {
-    throw new Error("No se pudo reformular la consulta con el modelo.");
-  }
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const content = data.choices?.[0]?.message?.content;
+  const content = response.text;
   if (!content) throw new Error("El modelo devolvió un plan vacío.");
-  const parsed = JSON.parse(content) as Partial<SearchPlan>;
+  const parsed = JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, "")) as Partial<SearchPlan>;
   return {
     original_query: request.query,
     indexes: request.indexes,

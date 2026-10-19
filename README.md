@@ -74,6 +74,10 @@ GEMINI_EMBEDDING_OUTPUT_DIMENSIONALITY=1536
 - `clap`: CLAP para consulta↔audio (`audio_index.faiss`).
 - `gemini`: Gemini Embedding 2 nativo para consulta↔audio
   (`gemini_audio_index.faiss`); requiere `GEMINI_API_KEY`.
+- `embeddinggemma`: EmbeddingGemma 2 local para consulta↔audio
+  (`embeddinggemma_audio_index.faiss`, 768 dimensiones por defecto). Reemplaza
+  a CLAP sin llamadas a una API de inferencia. Requiere el extra
+  `embeddinggemma`, que fija Transformers con soporte para este modelo.
 - `yamnet`: clasificador AudioSet por segmento. Guarda etiquetas y scores de
   eventos acústicos, pero no crea un índice FAISS. Requiere `uv sync --extra yamnet`.
 

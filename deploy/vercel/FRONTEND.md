@@ -1,34 +1,16 @@
 # Frontend de búsqueda en Vercel (`web/`)
 
-Documento de implementación del frontend de búsqueda para el despliegue **Vercel + Neon (pgvector) + Eve Agents**. Es una adaptación del `frontend-direct-search/` existente: mismo contrato de API, misma experiencia, pero orientado a las rutas serverless de este directorio y a los clips públicos de **Vercel Blob**.
+Documento de implementación del frontend de búsqueda para **Vercel + Neon (pgvector) + Eve Agents**. La reproducción usa clips en Vercel Blob privado con URLs firmadas de corta duración.
 
 ## Estado de despliegue
 
-**Desplegado en producción: https://audio-semantic-search.vercel.app** (proyecto Vercel `audio-semantic-search`, equipo `hordiales-projects`, región iad1 — deploy via `vercel deploy --prod` con build en la nube para Linux x64).
-
-Verificado en producción (`vercel curl`, porque el proyecto tiene Deployment Protection):
-
-```text
-GET /              → 200 (SPA)
-GET /api/health    → 200  {"status":"ok","target":"vercel-neon-eve"}
-GET /eve/v1/health → 200  {"ok":true,"status":"ready","workflowId":"workflow//eve//workflowEntry"}
-GET /api/datasets  → 502  (esperado: DATABASE_URL aún no configurada en el proyecto)
-```
-
-**Deployment Protection está ACTIVADA** (Vercel Authentication/SSO): cualquier visitante debe loguearse con la cuenta de Vercel. Para hacerlo público: Project Settings → Deployment Protection → desactivar "Vercel Authentication". Dejarla activa es válido para uso interno.
-
-**Pendiente para que la búsqueda funcione end-to-end:**
-
-1. Configurar env vars en el proyecto (Production): `DATABASE_URL`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `HF_API_TOKEN` — ver `.env.example`.
-2. Aplicar `db/schema.sql` en Neon.
-3. Publicar el dataset: `scripts/publish_dataset_neon.py`.
-4. Redeploy (o `vercel redeploy`) para que las funciones levanten las vars.
+La Preview actual está **Ready** en <https://audio-semantic-search-olisyswq4-hordiales-projects.vercel.app> con Deployment Protection habilitada. Neon y el store privado Blob están conectados y el dataset Massa–Milei está publicado. No se ha probado una solicitud de búsqueda o reproducción contra el deployment; ese es el siguiente paso. Production no se ha configurado en este flujo.
 
 Para re-deployar cambios:
 
 ```bash
 cd deploy/vercel
-vercel deploy --prod        # build en la nube (recomendado: el bundle eve incluye nativos linux)
+vercel deploy --yes         # Preview; Production requiere una decisión aparte
 ```
 
 ## Arquitectura
@@ -43,11 +25,12 @@ Browser (SPA React en dist-web/)
    ├──► GET  /api/datasets     │  (servicio "api" — server.ts Express)
    ├──► GET  /api/corpus       │
    ├──► GET  /api/segments/:id │
+   ├──► GET  /api/clips/:id    │  URL firmada de cinco minutos → Blob privado
    ├──► GET  /api/health       ┘
    └──► /eve/v1/*              Eve Agent Runtime (servicio generado por withEve)
             │
             ▼
-   Neon Postgres (pgvector) + Vercel Blob (.opus) + APIs de embedding (HF/Gemini/OpenAI)
+   Neon Postgres (pgvector) + Vercel Blob privado + servicio EmbeddingGemma 2 + AI Gateway
 ```
 
 `vercel.ts` compone el grafo con `withEve` — **3 servicios**:
@@ -120,4 +103,4 @@ vercel dev --local  → / 200, /api/health 200, /eve/v1/health 200, /eve/v1/info
 vercel deploy --prod → https://audio-semantic-search.vercel.app (3 servicios vivos)  ✓
 ```
 
-Pendiente: configurar env vars de producción, provisionar Neon + Blob y publicar el dataset con `scripts/publish_dataset_neon.py` (ver "Estado de despliegue"). Opcionalmente migrar el drawer a `useEveAgent()` para streaming/sesiones durables del canal Eve.
+Preview ya tiene Neon, Blob privado y el dataset publicados. Pendiente: validar búsqueda y reproducción desde la interfaz protegida y luego decidir si configurar Production. Opcionalmente migrar el drawer a `useEveAgent()` para streaming/sesiones durables del canal Eve.

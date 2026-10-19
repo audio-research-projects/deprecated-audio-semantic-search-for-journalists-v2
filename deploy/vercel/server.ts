@@ -13,6 +13,7 @@
 import express from "express";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import agentChat from "./api/agent-chat.js";
+import clip from "./api/clips/[segmentId].js";
 import corpus from "./api/corpus.js";
 import datasets from "./api/datasets.js";
 import feedback from "./api/feedback.js";
@@ -41,14 +42,8 @@ app.all("/api/search", mount(search));
 app.all("/api/search/plan", mount(searchPlan));
 app.all("/api/agent-chat", mount(agentChat));
 app.all("/api/feedback", mount(feedback));
-// Vercel puts dynamic-segment params in req.query; Express puts them in req.params.
-app.all("/api/segments/:segmentId", (req, res, next) => {
-  (req as unknown as VercelRequest).query = {
-    ...req.query,
-    segmentId: req.params.segmentId,
-  } as VercelRequest["query"];
-  return mount(segment)(req, res, next);
-});
+app.all("/api/clips/:segmentId", mount(clip));
+app.all("/api/segments/:segmentId", mount(segment));
 
 // Standalone local run (`node server.ts` / `tsx server.ts`). Inside `vercel dev`
 // and production builds VERCEL is set and the runtime wraps the exported app.

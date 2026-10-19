@@ -28,11 +28,50 @@ web/ — SPA React + Vite (búsqueda directa + drawer del Eve Agent)
        └────────────────────────────────────────────────────────────┘
 ```
 
-`vercel.ts` compone el grafo de servicios con `withEve` — **3 servicios**: `web` (framework `vite`, estáticos de `dist-web/`), `api` (framework `express`, `server.ts` monta los handlers de `api/` en una sola Function — en modo services Vercel no construye el directorio `api/` suelto) y `eve` (generado automáticamente, montado en `/eve/v1/*`).
+`vercel.ts` compone el grafo de servicios con `withEve` — **4 servicios**: `web` (framework `vite`, estáticos de `dist-web/`), `api` (framework `express`, `server.ts` monta los handlers de `api/` en una sola Function — en modo services Vercel no construye el directorio `api/` suelto), `eve` (generado automáticamente, montado en `/eve/v1/*`) y `embeddings` (FastAPI privado, consultas de texto con EmbeddingGemma 2).
 
 ---
 
 ## Paso 1: Procesar el corpus localmente (con embeddings compatibles con API)
+
+### Entorno local aislado (macOS)
+
+Desde la raíz del repositorio:
+
+```bash
+brew install pyenv uv ffmpeg
+pyenv install -s 3.11.13
+uv sync --locked --python "$(pyenv prefix 3.11.13)/bin/python" --extra yamnet --extra neon
+source .venv/bin/activate
+```
+
+`.python-version` selecciona Python 3.11.13 para este proyecto; no hace falta
+cambiar `pyenv global`. Las dependencias se instalan en `.venv`, incluyendo
+TensorFlow para YAMNet y `psycopg` para publicar en Neon. Usá los mismos extras
+en los siguientes `uv run` para conservar estas dependencias:
+
+```bash
+EMBEDDINGS_ACTIVE=text,gemini CLASSIFIERS_ACTIVE=yamnet \
+uv run --locked --extra yamnet --extra neon python scripts/ingest_youtube_neon.py \
+  --youtube-url "https://www.youtube.com/watch?v=DVt_mzCOGtA" \
+  --download-dir ./data/youtube-debate \
+  --dataset ./dataset/debate \
+  --dataset-id debate-massa-milei \
+  --label "Debate Massa–Milei" \
+  --language es \
+  --audio-embedding-source gemini \
+  --skip-publish
+```
+
+Requiere `GEMINI_API_KEY` para procesar el índice acústico. Revisá el dataset
+local antes de publicar. Para publicar después, repetí el comando reemplazando
+`--skip-publish` por `--skip-pipeline`. Para este proyecto, las credenciales
+OIDC de Blob se obtienen con `vercel env pull`; no se necesita guardar un
+`BLOB_READ_WRITE_TOKEN` permanente. `DATABASE_URL` debe corresponder al entorno
+Preview donde se creó el dataset.
+
+`--dry-run` del orquestador descarga y procesa el audio: solo omite las
+escrituras remotas y puede consumir APIs.
 
 En Vercel Serverless no se carga PyTorch (~1.7 GB de CLAP), por lo que las consultas generan embeddings por API y buscan en **Neon `pgvector`**.
 
@@ -58,20 +97,40 @@ uv run python -m src.simple_dataset_pipeline \
 ```bash
 EMBEDDINGS_ACTIVE=text,embeddinggemma \
 EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY=768 \
-uv run python -m src.simple_dataset_pipeline --input data/ --output ./dataset
+uv run --extra embeddinggemma --extra yamnet --extra neon python -m src.simple_dataset_pipeline --input data/ --output ./dataset
 ```
 
-En el lado de consulta (Vercel no puede correr el modelo), seteá `AUDIO_EMBEDDING_PROVIDER=embeddinggemma` + `EMBEDDINGGEMMA_API_URL` apuntando al servicio de referencia en `deploy/vercel/embeddinggemma-service/` (FastAPI, `POST /embed {text, modality} → {embedding}` — Dockerfile incluido para Cloud Run). La dimensión del servicio debe coincidir con `EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY` de la ingesta.
+En el lado de consulta, `vercel.ts` declara el servicio privado `embeddings`, que carga solo el encoder de texto y expone `POST /embed {text} → {embedding}`. La API y el agente reciben su URL mediante el binding `EMBEDDINGGEMMA_SERVICE_URL`. El provider de audio predeterminado es `embeddinggemma`; la consulta sigue siendo texto. Ver [configuración y validación del servicio](embeddinggemma-service/README.md). La dimensión del servicio debe coincidir con `EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY` de la ingesta.
 
 ### Ingesta directa desde YouTube
+
+Para una ingesta completamente local, usar `EMBEDDINGS_ACTIVE=text,embeddinggemma`
+y `CLASSIFIERS_ACTIVE=yamnet`, con los extras `embeddinggemma`, `yamnet` y `neon`
+instalados (`uv sync --locked --extra embeddinggemma --extra yamnet --extra neon`).
+El extra `embeddinggemma` fija un commit oficial de Transformers que reconoce
+esta arquitectura; la versión estable 5.17 todavía no la soporta. Este extra
+no se puede combinar con `eval-deepeval` por sus requisitos incompatibles de
+Click; el resto de la ingesta no necesita DeepEval.
+El índice de audio queda en `indices/embeddinggemma_audio_index.faiss` (768d
+por defecto). Las consultas deben usar el mismo modelo y dimensionalidad.
+Las pruebas locales de consulta con FAISS y PyTorch en macOS se ejecutaron
+en CPU con `OMP_NUM_THREADS=1`.
+
+**AI Gateway (verificado el 17 de octubre de 2026):** el
+[catálogo público de Vercel](https://ai-gateway.vercel.sh/v1/models) no incluye
+EmbeddingGemma 2. Incluye `google/gemini-embedding-2`, que es otro modelo y no
+se puede usar para consultar vectores generados con EmbeddingGemma 2.
+El servicio privado `embeddinggemma-service/` conserva el mismo espacio vectorial.
+Configurar `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` antes del despliegue y medir su
+memoria en una preview. `EMBEDDINGGEMMA_API_URL` permite sobrescribir el binding
+para usar un servicio externo. Revalidar el catálogo antes del despliegue.
 
 `scripts/ingest_youtube_neon.py` orquesta todo el flujo (descarga `yt-dlp` → pipeline de ingesta → Neon + Vercel Blob) a partir de uno o más links:
 
 ```bash
 EMBEDDINGS_ACTIVE=text,embeddinggemma \
 DATABASE_URL="postgresql://..." \
-BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..." \
-uv run python scripts/ingest_youtube_neon.py \
+uv run --extra embeddinggemma --extra yamnet --extra neon python scripts/ingest_youtube_neon.py \
   --youtube-url "https://www.youtube.com/watch?v=DVt_mzCOGtA" \
   --dataset ./dataset-youtube \
   --dataset-id youtube \
@@ -107,7 +166,7 @@ vercel env pull .env.local
 
 ## Paso 3: Publicar el dataset local en Neon + Vercel Blob
 
-Desde la **raíz del repositorio**, ejecutá `scripts/publish_dataset_neon.py` pasando `DATABASE_URL` y `BLOB_READ_WRITE_TOKEN`:
+Desde la **raíz del repositorio**, ejecutá `scripts/publish_dataset_neon.py` pasando `DATABASE_URL` y las credenciales OIDC de Blob (o un token RW):
 
 ```bash
 # Vista previa sin escribir en la base ni subir archivos (--dry-run)
@@ -118,9 +177,7 @@ uv run python scripts/publish_dataset_neon.py \
   --dry-run
 
 # Publicación real en Neon Postgres + subida de clips .opus a Vercel Blob
-DATABASE_URL="postgresql://..." \
-BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..." \
-uv run --with 'psycopg[binary]' python scripts/publish_dataset_neon.py \
+uv run --extra neon python scripts/publish_dataset_neon.py \
   --dataset ./dataset \
   --dataset-id default \
   --label "Archivo Periodístico"
@@ -136,17 +193,19 @@ Ver `.env.example` para la lista completa y comentada. Mínimo funcional:
 
 ```bash
 DATABASE_URL=postgresql://...   # Neon Postgres + pgvector (obligatoria)
-OPENAI_API_KEY=sk-...           # Eve agent, planner y traducción (obligatoria)
-GEMINI_API_KEY=...              # solo si usás el índice acústico (default: gemini)
+TEXT_GENERATION_MODEL=openai/gpt-4o-mini # Eve, planner y traducción vía Gateway
+VERCEL_SUPPORT_LARGE_FUNCTIONS=1 # necesario para el servicio de embeddings
+# GEMINI_API_KEY=...            # solo para un dataset indexado con Gemini
 HF_API_TOKEN=hf_...             # recomendada para embeddings de texto vía HF
 ```
 
 Reglas importantes:
 
-- **Los providers/dimensiones de embeddings deben coincidir con lo indexado** en `audio_segments.text_embedding` / `audio_embedding` por `publish_dataset_neon.py` (`TEXT_EMBEDDING_*` y `AUDIO_EMBEDDING_*`, default: HF MiniLM 384d + Gemini 1536d).
+- **Los providers/dimensiones de embeddings deben coincidir con lo indexado** en `audio_segments.text_embedding` / `audio_embedding` por `publish_dataset_neon.py` (`TEXT_EMBEDDING_*` y `AUDIO_EMBEDDING_*`, default: HF MiniLM 384d + EmbeddingGemma 2 768d).
 - `ALLOWED_ORIGINS` habilita CORS real en `/api/*` (`src/cors.ts`): solo hace falta si consumís la API desde otro origen (p. ej. `frontend-direct-search` en GitHub Pages). Sin definir, no se emiten headers CORS.
 - `EVE_PUBLIC_BEARER_TOKEN` opcional: protege `/eve/v1/*` con bearer token; sin definir, el canal queda público anónimo.
-- `BLOB_READ_WRITE_TOKEN` solo lo usa el publisher, no el runtime.
+- El publisher usa OIDC (`VERCEL_OIDC_TOKEN` + `BLOB_STORE_ID`) del entorno conectado; el runtime usa OIDC para emitir URLs firmadas.
+- AI Gateway usa OIDC en Vercel. Para desarrollo local, descarga las variables con `vercel env pull`.
 - `VITE_API_BASE_URL` vacío = same-origin (default para esta SPA).
 
 Para producción, definilas en los settings del proyecto Vercel (`vercel env add` o dashboard), y localmente corré `vercel env pull .env.local`.

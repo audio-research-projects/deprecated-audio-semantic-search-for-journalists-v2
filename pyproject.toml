@@ -35,6 +35,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# EmbeddingGemma 2 support has not reached the stable Transformers release.
+embeddinggemma = [
+    "transformers>=5.19.0.dev0",
+]
+# Client used by the local publisher for the Vercel + Neon deployment.
+neon = [
+    "psycopg[binary]>=3.2,<4",
+    "vercel-blob>=0.5.0,<1",
+]
 # YAMNet is optional because TensorFlow substantially increases the local runtime.
 # Install it only in ingestion environments that classify acoustic events.
 yamnet = [
@@ -160,6 +169,10 @@ tensorflow = ">=2.16,<2.21"
 tensorflow-hub = ">=0.16,<0.17"
 
 [tool.uv]
+conflicts = [
+    # The new Transformers/HF Hub stack needs click>=8.4.2; DeepEval pins <8.4.
+    [{ extra = "embeddinggemma" }, { extra = "eval-deepeval" }],
+]
 # `ml` resolves by default so local development, ingestion and the test suite
 # keep working with a plain `uv sync`. Container builds opt out explicitly.
 default-groups = ["dev", "ml"]
@@ -177,6 +190,7 @@ explicit = true
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu" }]
 torchvision = [{ index = "pytorch-cpu" }]
+transformers = [{ git = "https://github.com/huggingface/transformers.git", rev = "d4804f9d76b8c071b993d813e9e87067b780cbee", extra = "embeddinggemma" }]
 
 [tool.ruff]
 target-version = "py311"

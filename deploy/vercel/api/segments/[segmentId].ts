@@ -7,7 +7,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(405).json({ detail: "Method not allowed" });
     return;
   }
-  const rawId = req.query.segmentId;
+  const routeParams = (req as VercelRequest & { params?: Record<string, string> }).params;
+  const rawId = req.query.segmentId ?? routeParams?.segmentId;
   const segmentId = Number(Array.isArray(rawId) ? rawId[0] : rawId);
   if (!Number.isInteger(segmentId) || segmentId < 0) {
     res.status(400).json({ detail: "segmentId debe ser un entero no negativo." });

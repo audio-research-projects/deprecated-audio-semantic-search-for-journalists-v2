@@ -17,6 +17,8 @@ from pathlib import Path
 
 import numpy as np
 
+from src.query_translation import translate_to_english
+
 logger = logging.getLogger(__name__)
 
 EMBEDDING_GEMMA_DIM = 768
@@ -55,6 +57,7 @@ class EmbeddingGemmaMultimodalEmbedding:
         return self._model
 
     def _load_model(self):
+        import torch
         from sentence_transformers import SentenceTransformer
 
         config_kwargs = {} if self.config.include_vision else {"vision_config": None}
@@ -68,6 +71,9 @@ class EmbeddingGemmaMultimodalEmbedding:
             self.config.model_name,
             device=self.config.device,
             config_kwargs=config_kwargs,
+            # CPU inference needs float32; the checkpoint defaults to bfloat16.
+            # float16 is incompatible with EmbeddingGemma 2's activation range.
+            model_kwargs={"torch_dtype": torch.float32},
         )
         logger.info("EmbeddingGemma 2 loaded successfully")
 
@@ -102,10 +108,15 @@ class EmbeddingGemmaMultimodalEmbedding:
             embeddings.append(self.generate_audio_embedding(audio_path))
         return np.asarray(embeddings, dtype=np.float32)
 
-    def generate_query_embedding(self, query: str) -> np.ndarray:
-        """Embed a text query into the shared space (asymmetric search prompt)."""
+    def generate_query_embedding(
+        self, query: str, *, source_language: str | None = None
+    ) -> np.ndarray:
+        """Translate a text query to English, then encode it for audio retrieval."""
+        query = translate_to_english(query, source_language)
         return self._finalize(self.model.encode(query, prompt_name="SearchQuery"))
 
     # Alias matching the CLAPEmbedding contract used by query-side callers.
-    def generate_text_embedding(self, text: str, **_) -> np.ndarray:
-        return self.generate_query_embedding(text)
+    def generate_text_embedding(
+        self, text: str, *, source_language: str | None = None
+    ) -> np.ndarray:
+        return self.generate_query_embedding(text, source_language=source_language)

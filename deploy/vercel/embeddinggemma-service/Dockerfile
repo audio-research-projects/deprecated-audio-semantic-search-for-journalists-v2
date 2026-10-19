@@ -1,26 +1,20 @@
-# EmbeddingGemma 2 query-side inference service (Cloud Run / Modal / VM).
-# Model: google/embeddinggemma-2 (Apache 2.0) via sentence-transformers>=6.1.
-FROM python:3.11-slim
+# Optional container deployment of the same text-only inference service.
+FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    HF_HOME=/opt/hf-cache \
-    EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY=768
+    EMBEDDINGGEMMA_MODEL_PATH=/app/model \
+    EMBEDDINGGEMMA_OUTPUT_DIMENSIONALITY=768 \
+    OMP_NUM_THREADS=1 \
+    TOKENIZERS_PARALLELISM=false
 
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+COPY main.py prepare_model.py /app/
+RUN python prepare_model.py
 
-RUN pip install --no-cache-dir \
-    "sentence-transformers[audio]>=6.1" \
-    "transformers>=4.57" \
-    "fastapi>=0.115" \
-    "uvicorn[standard]>=0.30" \
-    "httpx>=0.27" \
-    "soundfile>=0.12" \
-    "torchcodec>=0.5" \
-    "torch>=2.2" \
-    "numpy>=1.24"
-
-COPY main.py /app/main.py
-
-# Cloud Run listens on $PORT (default 8080).
 EXPOSE 8080
 CMD ["python", "main.py"]
